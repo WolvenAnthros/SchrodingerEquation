@@ -46,6 +46,7 @@ for k in range(counts):
     probability_ground = probability_ground ** 2
     end_probability_ground.append(probability_ground)
     print(psi)
+
 axis = [x for x in range(counts)]
 fig, at = plt.subplots()
 at.plot(axis, end_probability_excited, label='excited state')
