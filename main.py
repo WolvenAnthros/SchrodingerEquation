@@ -32,6 +32,7 @@ end_probability_excited = []
 end_probability_ground = []
 
 for k in range(counts):
+    oscillatory_part = amplitude_R * np.cos(omega_R * (k * tau + tau / 2))
     # initial excited/ground state
     excited_state = np.array(
         [1, 0]
@@ -49,9 +50,9 @@ for k in range(counts):
     end_probability_ground.append(probability_ground)
     # Crank-Nicolson method implementation
     numerator = I - 1j * (tau / 2) * (
-            omega_01 * sigma_z + amplitude_R * np.cos(omega_R * (k * tau + tau / 2)) * sigma_x)
+            omega_01 * sigma_z + oscillatory_part * sigma_x)
     denominator = I + 1j * (tau / 2) * (
-            omega_01 * sigma_z + amplitude_R * np.cos(omega_R * (k * tau + tau / 2)) * sigma_x)
+            omega_01 * sigma_z + oscillatory_part * sigma_x)
     denominator = np.linalg.inv(denominator)
     fraction = np.matmul(denominator, numerator)
     psi = np.matmul(fraction, psi)
