@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import matplotlib.pyplot as plt
 import cmath
@@ -19,7 +21,7 @@ I = np.array(
 # initial parameters
 omega_01 = 5
 omega_R = 5
-amplitude_R = 0.1
+amplitude_R = np.pi
 time = 100
 counts = 2600
 tau = time / counts
@@ -33,7 +35,15 @@ end_probability_ground = []
 end_Rhabi = []
 for k in range(counts):
     t_k = lambda k, tau: k * tau
-    oscillatory_part = amplitude_R * np.cos(omega_R * (2 * t_k(k + 1 / 2, tau)))
+    alpha = 1
+    sigma = 3
+    t_g = 4 * sigma
+    Omega_x_numerator = np.exp(-(t_k(k, tau) - 0.5 + t_g) ** 2 / (2 * sigma ** 2)) - np.exp(
+        -t_g ** 2 / (8 * sigma ** 2))
+    Omega_x_denominatior = np.sqrt(2 * np.pi * sigma ** 2) * math.erf(t_g / (np.sqrt(8) * sigma)) - t_g * np.exp(
+        -t_g ** 2 / (8 * sigma ** 2))
+    Omega_x = alpha * amplitude_R * (Omega_x_numerator) / Omega_x_denominatior
+    oscillatory_part = Omega_x * np.cos(omega_R * (2 * t_k(k + 1 / 2, tau)))
     # initial excited/ground state
     excited_state = np.array(
         [1, 0]
@@ -41,6 +51,7 @@ for k in range(counts):
     ground_state = np.array(
         [0, 1]
     )
+
     # excited probability formula
     probability_excited = np.matmul(excited_state, psi)
     probability_excited = abs(probability_excited * probability_excited.conjugate())
@@ -51,8 +62,8 @@ for k in range(counts):
     end_probability_ground.append(probability_ground)
     # Crank-Nicolson 2nd order method implementation
     Hamiltonian = omega_01 * sigma_z + oscillatory_part * sigma_x
-    Hamiltonian_1st_derivative = -amplitude_R * omega_R * np.sin(omega_R * (t_k(k + 1 / 2, tau)))
-    Hamiltonian_2nd_derivative = -amplitude_R * (omega_R ** 2) * np.cos(omega_R * (t_k(k + 1 / 2, tau)))
+    Hamiltonian_1st_derivative = -Omega_x * omega_R * np.sin(omega_R * (t_k(k + 1 / 2, tau)))
+    Hamiltonian_2nd_derivative = -Omega_x * (omega_R ** 2) * np.cos(omega_R * (t_k(k + 1 / 2, tau)))
     commutator = Hamiltonian_1st_derivative * Hamiltonian - Hamiltonian * Hamiltonian_1st_derivative
     F = Hamiltonian + (tau ** 2 / 24) * Hamiltonian_2nd_derivative - 1j * (tau ** 2 / 12) * commutator
     numerator = I - (tau ** 2 / 12) * np.matmul(F, F) - 1j * (tau / 2) * F
@@ -63,8 +74,8 @@ for k in range(counts):
     # norm of the psi matrix
     norm = abs(np.matmul(psi, psi.conjugate()))
     # Rhabi soultion for comparison
-    Omega = np.sqrt((omega_R - omega_01) ** 2 + amplitude_R ** 2)
-    Rhabi = 1 - amplitude_R ** 2 / Omega**2 * np.sin(Omega * t_k(k, tau) / 2) ** 2
+    Omega = np.sqrt((omega_R - omega_01) ** 2 + Omega_x ** 2)
+    Rhabi = 1 - Omega_x ** 2 / Omega ** 2 * np.sin(Omega * t_k(k, tau) / 2) ** 2
     end_Rhabi.append(Rhabi)
     print(norm)
 
@@ -77,5 +88,5 @@ at.plot(axis, end_Rhabi, label='Rhabi solution')
 at.set_xlabel('time')
 at.set_ylabel('probability')
 at.set_title("States graph")
-at.legend()
+at.legend(loc='lower right')
 plt.show()
