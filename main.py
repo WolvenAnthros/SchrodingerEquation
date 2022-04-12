@@ -4,60 +4,72 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cmath
 
-# Pauli matrices
-sigma_z = np.array(
-    [[1, 0],
-     [0, -1]]
-)
-sigma_x = np.array(
-    [[0, 1],
-     [1, 0]]
-)
-sigma_y = np.array(
-    [[0, -1j],
-     [1j, 0]]
-)
-# identity matrix
-I = np.array(
-    [[1, 0],
-     [0, 1]]
-)
+
+class Operator:
+    def __init__(self, dimension, conjugate):
+        self.dimension = dimension
+        self.conjugate = conjugate
+
+    def initialize(self):
+        try:
+            n = self.dimension
+            assert self.conjugate == 0 or self.conjugate == 1 == True
+            matrix = np.zeros((n, n))
+            if self.conjugate == 0:
+                for i in range(n):
+                    for j in range(n):
+                        if i + 1 == j:
+                            matrix[i][j] = np.sqrt(j)
+            else:
+                for i in range(n):
+                    for j in range(n):
+                        if j + 1 == i:
+                            matrix[i][j] = np.sqrt(i)
+            return matrix
+        except ValueError:
+            print('Please enter an integer!')
+            return None
+        except AssertionError:
+            print('PLease enter 0 for annihilation and 1 for creation')
+            return None
+
+
 # initial parameters
+dimension = int(input('Enter the number of dimensions: '))
 omega_01 = 5
 omega_R = 5
-amplitude_R = np.pi
+amplitude_R = 0.1
 time = 100
 counts = 2600
 tau = time / counts
 alpha = 1
 beta = 0.5
 sigma = 3
+mu = 5
 t_g = 4 * sigma
+# identity matrix
+I = np.zeros(dimension)
+creation = Operator(dimension, 0)
+creation = creation.initialize()
+annihilation = Operator(dimension, 1)
+annihilation = annihilation.initialize()
+
+
 # initial psi (determines the initial state)
-psi = np.array(
-    [1, 0]
-    , dtype=complex)
+def init_psi(dimensions):
+    matrix = np.zeros((dimensions, 1))
+    matrix[0][0] = 1
+    return matrix
+
+
+psi = init_psi(dimension)
 
 end_probability_excited = []
 end_probability_ground = []
+end_probability_third = []
 end_Rhabi = []
 
 for k in range(counts):
-    # initial excited/ground state
-    excited_state = np.array(
-        [1, 0]
-    )
-    ground_state = np.array(
-        [0, 1]
-    )
-    # excited probability formula
-    probability_excited = np.matmul(excited_state, psi)
-    probability_excited = abs(probability_excited * probability_excited.conjugate())
-    end_probability_excited.append(probability_excited)
-    # ground probability formula
-    probability_ground = np.matmul(ground_state, psi)
-    probability_ground = abs(probability_ground * probability_ground.conjugate())
-    end_probability_ground.append(probability_ground)
     # Start of psi calculation
     t = lambda k_, tau_: k_ * tau_
     # Oscillatory amplitude (related to DRAG techinque)
@@ -71,18 +83,16 @@ for k in range(counts):
     Omega_y_denominator = (sigma ** 2) * Omega_x_denominatior
     Omega_y = -beta * amplitude_R * (-Omega_y_numerator / Omega_y_denominator)
 
-    oscillatory_part = Omega_x * np.cos(omega_R * (2 * t(k + 1 / 2, tau))) + Omega_y * np.sin(
-        omega_R * (2 * t(k + 1 / 2, tau)))
-    oscillatory_part_1st_derivative = -Omega_x * omega_R * np.sin(
-        omega_R * (t(k + 1 / 2, tau))) + Omega_y * omega_R * np.cos(omega_R * (2 * t(k + 1 / 2, tau)))
-    oscillatory_part_2nd_derivative = -Omega_x * omega_R ** 2 * np.cos(
-        omega_R * (t(k + 1 / 2, tau))) - Omega_y * omega_R ** 2 * np.sin(omega_R * (2 * t(k + 1 / 2, tau)))
+    oscillatory_part = amplitude_R * np.cos(omega_R * (2 * t(k + 1 / 2, tau)))
+    oscillatory_part_1st_derivative = -amplitude_R * omega_R * np.sin(omega_R * (2 * t(k + 1 / 2, tau)))
+    oscillatory_part_2nd_derivative = -amplitude_R * omega_R ** 2 * np.cos(omega_R * (2 * t(k + 1 / 2, tau)))
 
     # Crank-Nicolson 2nd order method implementation
-    # ////// Should these matrices (sigma_x, sigma_y) be applied to Hamiltonian in the new theory? ///////
-    Hamiltonian = omega_01 * sigma_z + oscillatory_part # * (sigma_x + sigma_y)
-    Hamiltonian_1st_derivative = oscillatory_part_1st_derivative # * (sigma_x + sigma_y)
-    Hamiltonian_2nd_derivative = oscillatory_part_2nd_derivative # * (sigma_x + sigma_y)
+
+    Hamiltonian = omega_01 * creation * annihilation - mu / 2 * creation * annihilation * (
+            creation * annihilation - I) + oscillatory_part * (creation + annihilation)
+    Hamiltonian_1st_derivative = oscillatory_part_1st_derivative
+    Hamiltonian_2nd_derivative = oscillatory_part_2nd_derivative
     commutator = Hamiltonian_1st_derivative * Hamiltonian - Hamiltonian * Hamiltonian_1st_derivative
 
     F = Hamiltonian + (tau ** 2 / 24) * Hamiltonian_2nd_derivative - 1j * (tau ** 2 / 12) * commutator
@@ -94,8 +104,31 @@ for k in range(counts):
 
     psi = np.matmul(fraction, psi)
 
+    Hamiltonian_0 = Hamiltonian = omega_01 * creation * annihilation - mu / 2 * creation * annihilation * (
+            creation * annihilation - I) + amplitude_R * (creation + annihilation)
+
+    eigenenergy, eigenpsi = np.linalg.eig(Hamiltonian_0)
+    # initial excited/ground state
+    excited_state = eigenpsi[0]
+    ground_state = eigenpsi[1]
+    if dimension >= 2:
+        third_state = eigenpsi[2]
+    else:
+        third_state = 0
+    probability_third = third_state * psi
+    probability_third = abs(np.sum(probability_third * probability_third.conjugate()))
+    end_probability_third.append(probability_third)
+    # excited probability formula
+    probability_excited = excited_state * psi
+    probability_excited = abs(np.sum(probability_excited * probability_excited.conjugate()))
+    end_probability_excited.append(probability_excited)
+    # ground probability formula
+    probability_ground = ground_state * psi
+    probability_ground = abs(np.sum(probability_ground * probability_ground.conjugate()))
+    end_probability_ground.append(probability_ground)
+
     # norm of the psi matrix
-    norm = abs(np.matmul(psi, psi.conjugate()))
+    norm = abs(np.sum(psi * psi.conjugate()))
 
     # Rhabi soultion for comparison
     Omega = np.sqrt((omega_R - omega_01) ** 2 + (Omega_x + Omega_y) ** 2)
@@ -107,9 +140,9 @@ for k in range(counts):
 # plot image
 axis = [x for x in range(counts)]
 fig, at = plt.subplots()
-at.plot(axis, end_probability_excited, label='excited state')
-at.plot(axis, end_probability_ground, label='ground state')
-at.plot(axis, end_Rhabi, label='Rhabi solution')
+at.plot(axis, end_probability_excited, label='first state')
+at.plot(axis, end_probability_ground, label='second state')
+at.plot(axis, end_probability_third, label='third state')
 at.set_xlabel('time')
 at.set_ylabel('probability')
 at.set_title("States graph")
