@@ -148,7 +148,6 @@ for k in range(counts):
     Omega = np.sqrt((omega_R - omega_01) ** 2 + (Omega_x + Omega_y) ** 2)
     Rhabi = 1 - (Omega_x + Omega_y) ** 2 / Omega ** 2 * np.sin(Omega * t(k, tau) / 2) ** 2
     end_Rhabi.append(Rhabi)
-    print(probability_third+probability_excited+probability_ground)
 
 # plot image
 axis = [tau * x for x in range(counts)]
