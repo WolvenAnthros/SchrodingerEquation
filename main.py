@@ -39,7 +39,7 @@ dimension = int(input('Enter the number of dimensions: '))
 omega_01 = 5
 omega_R = 5
 amplitude_R = 0.1
-time = 30
+time = 5000
 counts = 2600
 tau = time / counts
 alpha = 1
@@ -48,7 +48,7 @@ sigma = 3
 mu = 5
 t_g = 4 * sigma
 # identity matrix
-I = np.zeros(dimension)
+I = np.identity(dimension)
 creation = Operator(dimension, 0)
 creation = creation.initialize()
 annihilation = Operator(dimension, 1)
@@ -114,25 +114,28 @@ for k in range(counts):
     psi = np.matmul(fraction, psi)
 
     # initial excited/ground state
-    excited_state = np.array([eigenpsi[:, 1]])
-    ground_state = np.array([eigenpsi[:, 0]])
+    excited_state = np.array(eigenpsi[:, [1]])
+    ground_state = np.array(eigenpsi[:, [0]])
     if dimension >= 3:
-        third_state = np.array([eigenpsi[:, 2]])
+        third_state = np.array(eigenpsi[:, [2]])
+
+        # third state probability formula
+        probability_third = np.matmul(third_state.transpose(), psi.conjugate())
+        probability_third = abs(np.sum(probability_third)) ** 2
+        end_probability_third.append(probability_third)
+
     else:
         third_state = 0
-
-    # third state probability formula
-    probability_third = np.matmul(psi.conjugate(), third_state)
-    probability_third = abs(np.sum(probability_third)) ** 2
-    end_probability_third.append(probability_third)
+        probability_third = 0
+        end_probability_third.append(probability_third)
 
     # excited probability formula
-    probability_excited = np.matmul(psi.conjugate(), excited_state)
+    probability_excited = np.matmul(excited_state.transpose(), psi.conjugate())
     probability_excited = abs(np.sum(probability_excited)) ** 2
     end_probability_excited.append(probability_excited)
 
     # ground probability formula
-    probability_ground = np.matmul(psi.conjugate(), ground_state)
+    probability_ground = np.matmul(ground_state.transpose(), psi.conjugate())
     probability_ground = abs(np.sum(probability_ground)) ** 2
     end_probability_ground.append(probability_ground)
 
@@ -145,13 +148,14 @@ for k in range(counts):
     Omega = np.sqrt((omega_R - omega_01) ** 2 + (Omega_x + Omega_y) ** 2)
     Rhabi = 1 - (Omega_x + Omega_y) ** 2 / Omega ** 2 * np.sin(Omega * t(k, tau) / 2) ** 2
     end_Rhabi.append(Rhabi)
+    print(probability_third+probability_excited+probability_ground)
 
 # plot image
 axis = [tau * x for x in range(counts)]
 fig, at = plt.subplots()
-at.plot(axis, end_probability_excited, label='first state')
-at.plot(axis, end_probability_ground, label='second state')
-#at.plot(axis, end_probability_third, label='third state')
+at.plot(axis, end_probability_excited, label='excited state')
+at.plot(axis, end_probability_ground, label='ground state')
+at.plot(axis, end_probability_third, label='third state')
 at.set_xlabel('time, ms')
 at.set_ylabel('probability')
 at.set_title("States graph")
