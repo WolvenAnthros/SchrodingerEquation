@@ -39,7 +39,7 @@ dimension = int(input('Enter the number of dimensions: '))
 omega_01 = 5
 omega_R = 5
 amplitude_R = 0.1
-time = 100
+time = 30
 counts = 2600
 tau = time / counts
 alpha = 1
@@ -69,9 +69,18 @@ end_probability_ground = []
 end_probability_third = []
 end_Rhabi = []
 
+# Finding eigenvalues and eigenvectors
+Hamiltonian_0 = omega_01 * np.matmul(creation, annihilation) - mu / 2 * np.matmul(creation, annihilation) * (
+        np.matmul(creation, annihilation) - I)
+eigenenergy, eigenpsi = np.linalg.eig(Hamiltonian_0)
+
+print(eigenpsi)
+
+# Main cycle
 for k in range(counts):
     # Start of psi calculation
     t = lambda k_, tau_: k_ * tau_
+
     # Oscillatory amplitude (related to DRAG techinque)
     Omega_x_numerator = np.exp(-(t(k, tau) - 0.5 + t_g) ** 2 / (2 * sigma ** 2)) - np.exp(
         -t_g ** 2 / (8 * sigma ** 2))
@@ -89,8 +98,8 @@ for k in range(counts):
 
     # Crank-Nicolson 2nd order method implementation
 
-    Hamiltonian = omega_01 * creation * annihilation - mu / 2 * creation * annihilation * (
-            creation * annihilation - I) + oscillatory_part * (creation + annihilation)
+    Hamiltonian = omega_01 * np.matmul(creation, annihilation) - mu / 2 * np.matmul(creation, annihilation) * (
+            np.matmul(creation, annihilation) - I) + oscillatory_part * (creation + annihilation)
     Hamiltonian_1st_derivative = oscillatory_part_1st_derivative
     Hamiltonian_2nd_derivative = oscillatory_part_2nd_derivative
     commutator = Hamiltonian_1st_derivative * Hamiltonian - Hamiltonian * Hamiltonian_1st_derivative
@@ -104,29 +113,31 @@ for k in range(counts):
 
     psi = np.matmul(fraction, psi)
 
-    Hamiltonian_0 = Hamiltonian = omega_01 * creation * annihilation - mu / 2 * creation * annihilation * (
-            creation * annihilation - I) + amplitude_R * (creation + annihilation)
-
-    eigenenergy, eigenpsi = np.linalg.eig(Hamiltonian_0)
     # initial excited/ground state
-    excited_state = eigenpsi[0]
-    ground_state = eigenpsi[1]
-    if dimension >= 2:
-        third_state = eigenpsi[2]
+    excited_state = np.array([eigenpsi[:, 1]])
+    ground_state = np.array([eigenpsi[:, 0]])
+    if dimension >= 3:
+        third_state = np.array([eigenpsi[:, 2]])
     else:
         third_state = 0
-    probability_third = third_state * psi
-    probability_third = abs(np.sum(probability_third * probability_third.conjugate()))
+
+    # third state probability formula
+    probability_third = np.matmul(psi.conjugate(), third_state)
+    probability_third = abs(np.sum(probability_third)) ** 2
     end_probability_third.append(probability_third)
+
     # excited probability formula
-    probability_excited = excited_state * psi
-    probability_excited = abs(np.sum(probability_excited * probability_excited.conjugate()))
+    probability_excited = np.matmul(psi.conjugate(), excited_state)
+    probability_excited = abs(np.sum(probability_excited)) ** 2
     end_probability_excited.append(probability_excited)
+
     # ground probability formula
-    probability_ground = ground_state * psi
-    probability_ground = abs(np.sum(probability_ground * probability_ground.conjugate()))
+    probability_ground = np.matmul(psi.conjugate(), ground_state)
+    probability_ground = abs(np.sum(probability_ground)) ** 2
     end_probability_ground.append(probability_ground)
 
+    # leakage
+    leakage = probability_ground + probability_excited + probability_third
     # norm of the psi matrix
     norm = abs(np.sum(psi * psi.conjugate()))
 
@@ -135,15 +146,13 @@ for k in range(counts):
     Rhabi = 1 - (Omega_x + Omega_y) ** 2 / Omega ** 2 * np.sin(Omega * t(k, tau) / 2) ** 2
     end_Rhabi.append(Rhabi)
 
-    print(norm)
-
 # plot image
-axis = [x for x in range(counts)]
+axis = [tau * x for x in range(counts)]
 fig, at = plt.subplots()
 at.plot(axis, end_probability_excited, label='first state')
 at.plot(axis, end_probability_ground, label='second state')
-at.plot(axis, end_probability_third, label='third state')
-at.set_xlabel('time')
+#at.plot(axis, end_probability_third, label='third state')
+at.set_xlabel('time, ms')
 at.set_ylabel('probability')
 at.set_title("States graph")
 at.legend(loc='lower right')
