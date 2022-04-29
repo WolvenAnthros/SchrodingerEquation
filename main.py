@@ -38,21 +38,21 @@ class Operator:
 dimension = int(input('Enter the number of dimensions: '))
 omega_01 = 5
 omega_R = 5
-amplitude_R = 0.1
-time = 5000
-counts = 2600
+amplitude_R = 0.01
+time = 300
+counts = 3000
 tau = time / counts
 alpha = 1
 beta = 0.5
 sigma = 3
-mu = 5
+mu = 0.3
 t_g = 4 * sigma
 # identity matrix
 I = np.identity(dimension)
-creation = Operator(dimension, 0)
-creation = creation.initialize()
-annihilation = Operator(dimension, 1)
+annihilation = Operator(dimension, 0)
 annihilation = annihilation.initialize()
+creation = Operator(dimension, 1)
+creation = creation.initialize()
 
 
 # initial psi (determines the initial state)
