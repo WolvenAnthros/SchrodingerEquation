@@ -75,26 +75,25 @@ Hamiltonian_0 = omega_01 * np.matmul(creation, annihilation) - mu / 2 * np.matmu
 eigenenergy, eigenpsi = np.linalg.eig(Hamiltonian_0)
 
 print(eigenpsi)
-
 # Main cycle
 for k in range(counts):
     # Start of psi calculation
-    t = lambda k_, tau_: k_ * tau_
+    t = lambda k_: k_ * tau
 
     # Oscillatory amplitude (related to DRAG techinque)
-    Omega_x_numerator = np.exp(-(t(k, tau) - 0.5 + t_g) ** 2 / (2 * sigma ** 2)) - np.exp(
+    Omega_x_numerator = np.exp(-(t(k) - 0.5 * t_g) ** 2 / (2 * sigma ** 2)) - np.exp(
         -t_g ** 2 / (8 * sigma ** 2))
     Omega_x_denominatior = np.sqrt(2 * np.pi * sigma ** 2) * math.erf(t_g / (np.sqrt(8) * sigma)) - t_g * np.exp(
         -t_g ** 2 / (8 * sigma ** 2))
     Omega_x = alpha * amplitude_R * Omega_x_numerator / Omega_x_denominatior
 
-    Omega_y_numerator = np.exp(-(t(k, tau) - 0.5 + t_g) ** 2 / (2 * sigma ** 2)) * (t(k, tau) - 0.5 * t_g)
+    Omega_y_numerator = np.exp(-(t(k) - 0.5 * t_g) ** 2 / (2 * sigma ** 2)) * (t(k) - 0.5 * t_g)
     Omega_y_denominator = (sigma ** 2) * Omega_x_denominatior
     Omega_y = -beta * amplitude_R * (-Omega_y_numerator / Omega_y_denominator)
 
-    oscillatory_part = amplitude_R * np.cos(omega_R * (2 * t(k + 1 / 2, tau)))
-    oscillatory_part_1st_derivative = -amplitude_R * omega_R * np.sin(omega_R * (2 * t(k + 1 / 2, tau)))
-    oscillatory_part_2nd_derivative = -amplitude_R * omega_R ** 2 * np.cos(omega_R * (2 * t(k + 1 / 2, tau)))
+    oscillatory_part = amplitude_R * np.cos(omega_R * (t(k + 1 / 2)))
+    oscillatory_part_1st_derivative = -amplitude_R * omega_R * np.sin(omega_R * (t(k + 1 / 2)))
+    oscillatory_part_2nd_derivative = -amplitude_R * omega_R ** 2 * np.cos(omega_R * (t(k + 1 / 2)))
 
     # Crank-Nicolson 2nd order method implementation
 
@@ -146,7 +145,7 @@ for k in range(counts):
 
     # Rhabi soultion for comparison
     Omega = np.sqrt((omega_R - omega_01) ** 2 + (Omega_x + Omega_y) ** 2)
-    Rhabi = 1 - (Omega_x + Omega_y) ** 2 / Omega ** 2 * np.sin(Omega * t(k, tau) / 2) ** 2
+    Rhabi = 1 - (Omega_x + Omega_y) ** 2 / Omega ** 2 * np.sin(Omega * t(k) / 2) ** 2
     end_Rhabi.append(Rhabi)
 
 # plot image
@@ -155,6 +154,7 @@ fig, at = plt.subplots()
 at.plot(axis, end_probability_excited, label='excited state')
 at.plot(axis, end_probability_ground, label='ground state')
 at.plot(axis, end_probability_third, label='third state')
+#at.plot(axis, end_Rhabi, label='Rhabi')
 at.set_xlabel('time, ms')
 at.set_ylabel('probability')
 at.set_title("States graph")
