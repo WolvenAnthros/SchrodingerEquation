@@ -33,13 +33,40 @@ class Operator:
             print('PLease enter 0 for annihilation and 1 for creation')
             return None
 
+def set_alpha_state(dim, n):
+    try:
+        assert n in range(1, 7, 1)
+        alpha_1 = np.zeros((dim, 1))
+        alpha_1[1][0] = 1
+        alpha_2 = np.zeros((dim, 1))
+        alpha_2[0][0] = 1
+        if n == 1:
+            return alpha_1
+        elif n == 2:
+            return alpha_2
+        elif n == 3:
+            return 1 / np.sqrt(2) * (alpha_1 + alpha_2)
+        elif n == 4:
+            return 1 / np.sqrt(2) * (alpha_1 - alpha_2)
+        elif n == 5:
+            return 1 / np.sqrt(2) * (alpha_1 + alpha_2 * 1j)
+        elif n == 6:
+            return 1 / np.sqrt(2) * (alpha_1 - alpha_2 * 1j)
+        else:
+            return None
+    except ValueError:
+        print('Please enter an integer!')
+    except AssertionError:
+        print('PLease enter numbers from 1 to 6')
+        return None
+
 
 # initial parameters
 dimension = int(input('Enter the number of dimensions: '))
 omega_01 = 5
 omega_R = 5
-amplitude_R = 0.01
-time = 300
+amplitude_R = 0.1
+time = 30
 counts = 3000
 tau = time / counts
 alpha = 1
@@ -139,7 +166,7 @@ for k in range(counts):
     end_probability_ground.append(probability_ground)
 
     # leakage
-    leakage = probability_ground + probability_excited + probability_third
+    leakage =  probability_third
     # norm of the psi matrix
     norm = abs(np.sum(psi * psi.conjugate()))
 
@@ -148,13 +175,29 @@ for k in range(counts):
     Rhabi = 1 - (Omega_x + Omega_y) ** 2 / Omega ** 2 * np.sin(Omega * t(k) / 2) ** 2
     end_Rhabi.append(Rhabi)
 
+# Fidelity calculation
+rotation_core = np.array([[0, -1], [1, 0]])
+rotation_matrix = np.identity(dimension)
+rotation_matrix[0:2, 0:2] = rotation_core
+fidelity = 0
+
+for i in range(1, 7, 1):
+    psi_g = np.matmul(rotation_matrix, set_alpha_state(dimension, i))
+    probability = np.matmul(psi.transpose(), psi_g)
+    probability = abs(np.sum(probability)) ** 2
+    fidelity += 1/6 * probability
+    print(fidelity)
+
+print('The fidelity is:', str(fidelity), sep=' ')
+print('The leakage is:', str(leakage))
+
 # plot image
 axis = [tau * x for x in range(counts)]
 fig, at = plt.subplots()
 at.plot(axis, end_probability_excited, label='excited state')
 at.plot(axis, end_probability_ground, label='ground state')
 at.plot(axis, end_probability_third, label='third state')
-#at.plot(axis, end_Rhabi, label='Rhabi')
+# at.plot(axis, end_Rhabi, label='Rhabi')
 at.set_xlabel('time, ms')
 at.set_ylabel('probability')
 at.set_title("States graph")
