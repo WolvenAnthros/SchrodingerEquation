@@ -33,7 +33,8 @@ class Operator:
             print('PLease enter 0 for annihilation and 1 for creation')
             return None
 
-def set_alpha_state(dim, n):
+
+def alpha_state(dim, n):
     try:
         assert n in range(1, 7, 1)
         alpha_1 = np.zeros((dim, 1))
@@ -62,6 +63,17 @@ def set_alpha_state(dim, n):
 
 
 # initial parameters
+try:
+    rotation_type = str(input('Enter the rotation axis:'))
+    assert rotation_type == 'x' or rotation_type == 'y'
+except ValueError:
+    print('Wrong value type')
+    quit()
+except AssertionError:
+    print('Please, enter x or y')
+    quit()
+
+phase = 0 if rotation_type == 'y' else np.pi / 2
 dimension = int(input('Enter the number of dimensions: '))
 omega_01 = 5
 omega_R = 5
@@ -89,7 +101,26 @@ def init_psi(dimensions):
     return matrix
 
 
-psi = init_psi(dimension)
+def Rhabi_solution():
+    for k in range(counts):
+        # Start of psi calculation
+        t = lambda k_: k_ * tau
+        # Oscillatory amplitude (related to DRAG techinque)
+        Omega_x_numerator = np.exp(-(t(k) - 0.5 * t_g) ** 2 / (2 * sigma ** 2)) - np.exp(
+            -t_g ** 2 / (8 * sigma ** 2))
+        Omega_x_denominatior = np.sqrt(2 * np.pi * sigma ** 2) * math.erf(t_g / (np.sqrt(8) * sigma)) - t_g * np.exp(
+            -t_g ** 2 / (8 * sigma ** 2))
+        Omega_x = alpha * amplitude_R * Omega_x_numerator / Omega_x_denominatior
+
+        Omega_y_numerator = np.exp(-(t(k) - 0.5 * t_g) ** 2 / (2 * sigma ** 2)) * (t(k) - 0.5 * t_g)
+        Omega_y_denominator = (sigma ** 2) * Omega_x_denominatior
+        Omega_y = -beta * amplitude_R * (-Omega_y_numerator / Omega_y_denominator)
+
+        # Rhabi soultion for comparison
+        Omega = np.sqrt((omega_R - omega_01) ** 2 + (Omega_x + Omega_y) ** 2)
+        Rhabi = 1 - (Omega_x + Omega_y) ** 2 / Omega ** 2 * np.sin(Omega * t(k) / 2) ** 2
+        end_Rhabi.append(Rhabi)
+
 
 end_probability_excited = []
 end_probability_ground = []
@@ -101,22 +132,12 @@ Hamiltonian_0 = omega_01 * np.matmul(creation, annihilation) - mu / 2 * np.matmu
         np.matmul(creation, annihilation) - I)
 eigenenergy, eigenpsi = np.linalg.eig(Hamiltonian_0)
 
-print(eigenpsi)
 # Main cycle
+
+psi = init_psi(dimension)
 for k in range(counts):
     # Start of psi calculation
     t = lambda k_: k_ * tau
-
-    # Oscillatory amplitude (related to DRAG techinque)
-    Omega_x_numerator = np.exp(-(t(k) - 0.5 * t_g) ** 2 / (2 * sigma ** 2)) - np.exp(
-        -t_g ** 2 / (8 * sigma ** 2))
-    Omega_x_denominatior = np.sqrt(2 * np.pi * sigma ** 2) * math.erf(t_g / (np.sqrt(8) * sigma)) - t_g * np.exp(
-        -t_g ** 2 / (8 * sigma ** 2))
-    Omega_x = alpha * amplitude_R * Omega_x_numerator / Omega_x_denominatior
-
-    Omega_y_numerator = np.exp(-(t(k) - 0.5 * t_g) ** 2 / (2 * sigma ** 2)) * (t(k) - 0.5 * t_g)
-    Omega_y_denominator = (sigma ** 2) * Omega_x_denominatior
-    Omega_y = -beta * amplitude_R * (-Omega_y_numerator / Omega_y_denominator)
 
     oscillatory_part = amplitude_R * np.cos(omega_R * (t(k + 1 / 2)))
     oscillatory_part_1st_derivative = -amplitude_R * omega_R * np.sin(omega_R * (t(k + 1 / 2)))
@@ -166,26 +187,48 @@ for k in range(counts):
     end_probability_ground.append(probability_ground)
 
     # leakage
-    leakage =  probability_third
+    leakage = probability_third
     # norm of the psi matrix
     norm = abs(np.sum(psi * psi.conjugate()))
 
-    # Rhabi soultion for comparison
-    Omega = np.sqrt((omega_R - omega_01) ** 2 + (Omega_x + Omega_y) ** 2)
-    Rhabi = 1 - (Omega_x + Omega_y) ** 2 / Omega ** 2 * np.sin(Omega * t(k) / 2) ** 2
-    end_Rhabi.append(Rhabi)
-
 # Fidelity calculation
-rotation_core = np.array([[0, -1], [1, 0]])
-rotation_matrix = np.identity(dimension)
+rotation_core = np.array([[0, -1j], [1, 0]]) if rotation_type == 'y' else np.array([[0, 1], [-1j, 0]])
+rotation_matrix = np.identity(dimension, dtype='cfloat')
 rotation_matrix[0:2, 0:2] = rotation_core
 fidelity = 0
 
+
+def wave_function_calculation(wave_function):
+    for k in range(counts):
+        # Start of psi calculation
+        t = lambda k_: k_ * tau
+        oscillatory_part = amplitude_R * np.cos(omega_R * (t(k + 1 / 2)) + phase)
+        oscillatory_part_1st_derivative = -amplitude_R * omega_R * np.sin(omega_R * (t(k + 1 / 2)) + phase)
+        oscillatory_part_2nd_derivative = -amplitude_R * omega_R ** 2 * np.cos(omega_R * (t(k + 1 / 2)) + phase)
+
+        # Crank-Nicolson 2nd order method implementation
+        Hamiltonian = omega_01 * np.matmul(creation, annihilation) - mu / 2 * np.matmul(creation, annihilation) * (
+                np.matmul(creation, annihilation) - I) + oscillatory_part * (creation + annihilation)
+        Hamiltonian_1st_derivative = oscillatory_part_1st_derivative
+        Hamiltonian_2nd_derivative = oscillatory_part_2nd_derivative
+        commutator = Hamiltonian_1st_derivative * Hamiltonian - Hamiltonian * Hamiltonian_1st_derivative
+
+        F = Hamiltonian + (tau ** 2 / 24) * Hamiltonian_2nd_derivative - 1j * (tau ** 2 / 12) * commutator
+
+        numerator = I - (tau ** 2 / 12) * np.matmul(F, F) - 1j * (tau / 2) * F
+        denominator = I - (tau ** 2 / 12) * np.matmul(F, F) + 1j * (tau / 2) * F
+        denominator = np.linalg.inv(denominator)
+
+        fraction = np.matmul(denominator, numerator)
+        wave_function = np.matmul(fraction, wave_function)
+    return wave_function
+
+
 for i in range(1, 7, 1):
-    psi_g = np.matmul(rotation_matrix, set_alpha_state(dimension, i))
-    probability = np.matmul(psi.transpose(), psi_g)
+    psi_g = np.matmul(rotation_matrix, alpha_state(dimension, i))
+    probability = np.matmul(wave_function_calculation(alpha_state(dimension, i)).transpose(), psi_g)
     probability = abs(np.sum(probability)) ** 2
-    fidelity += 1/6 * probability
+    fidelity += 1 / 6 * probability
     print(fidelity)
 
 print('The fidelity is:', str(fidelity), sep=' ')
