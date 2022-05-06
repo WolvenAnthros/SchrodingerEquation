@@ -65,7 +65,7 @@ def alpha_state(dim, n):
 # initial parameters
 try:
     rotation_type = str(input('Enter the rotation axis:'))
-    assert rotation_type == 'x' or rotation_type == 'y'
+    assert rotation_type in ['x', 'y']
 except ValueError:
     print('Wrong value type')
     quit()
@@ -226,7 +226,7 @@ def wave_function_calculation(wave_function):
 
 for i in range(1, 7, 1):
     psi_g = np.matmul(rotation_matrix, alpha_state(dimension, i))
-    probability = np.matmul(wave_function_calculation(alpha_state(dimension, i)).transpose(), psi_g)
+    probability = np.matmul(wave_function_calculation(alpha_state(dimension, i)).transpose(), psi_g.conjugate())
     probability = abs(np.sum(probability)) ** 2
     fidelity += 1 / 6 * probability
     print(fidelity)
