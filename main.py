@@ -139,9 +139,9 @@ for k in range(counts):
     # Start of psi calculation
     t = lambda k_: k_ * tau
 
-    oscillatory_part = amplitude_R * np.cos(omega_R * (t(k + 1 / 2)))
-    oscillatory_part_1st_derivative = -amplitude_R * omega_R * np.sin(omega_R * (t(k + 1 / 2)))
-    oscillatory_part_2nd_derivative = -amplitude_R * omega_R ** 2 * np.cos(omega_R * (t(k + 1 / 2)))
+    oscillatory_part = amplitude_R * np.cos(omega_R * (t(k + 1 / 2)) + phase)
+    oscillatory_part_1st_derivative = -amplitude_R * omega_R * np.sin(omega_R * (t(k + 1 / 2)) + phase)
+    oscillatory_part_2nd_derivative = -amplitude_R * omega_R ** 2 * np.cos(omega_R * (t(k + 1 / 2)) + phase)
 
     # Crank-Nicolson 2nd order method implementation
 
