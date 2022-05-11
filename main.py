@@ -77,8 +77,8 @@ phase = 0 if rotation_type == 'y' else np.pi / 2
 dimension = int(input('Enter the number of dimensions: '))
 omega_01 = 5
 omega_R = 5
-amplitude_R = 0.1
-time = 30
+amplitude_R = 0.01
+time = 310
 counts = 3000
 tau = time / counts
 alpha = 1
@@ -126,6 +126,7 @@ end_probability_excited = []
 end_probability_ground = []
 end_probability_third = []
 end_Rhabi = []
+end_leakage=[]
 
 # Finding eigenvalues and eigenvectors
 Hamiltonian_0 = omega_01 * np.matmul(creation, annihilation) - mu / 2 * np.matmul(creation, annihilation) * (
@@ -163,18 +164,6 @@ for k in range(counts):
     # initial excited/ground state
     excited_state = np.array(eigenpsi[:, [1]])
     ground_state = np.array(eigenpsi[:, [0]])
-    if dimension >= 3:
-        third_state = np.array(eigenpsi[:, [2]])
-
-        # third state probability formula
-        probability_third = np.matmul(third_state.transpose(), psi.conjugate())
-        probability_third = abs(np.sum(probability_third)) ** 2
-        end_probability_third.append(probability_third)
-
-    else:
-        third_state = 0
-        probability_third = 0
-        end_probability_third.append(probability_third)
 
     # excited probability formula
     probability_excited = np.matmul(excited_state.transpose(), psi.conjugate())
@@ -186,10 +175,32 @@ for k in range(counts):
     probability_ground = abs(np.sum(probability_ground)) ** 2
     end_probability_ground.append(probability_ground)
 
-    # leakage
-    leakage = probability_third
     # norm of the psi matrix
     norm = abs(np.sum(psi * psi.conjugate()))
+    if dimension >= 3:
+        third_state = np.array(eigenpsi[:, [2]])
+
+        # third state probability formula
+        probability_third = np.matmul(third_state.transpose(), psi.conjugate())
+        probability_third = abs(np.sum(probability_third)) ** 2
+        end_probability_third.append(probability_third)
+        if abs(probability_excited-1)<0.01:
+            leakage = 0
+            for dim in range(2, dimension):
+                high_state = np.array(eigenpsi[:, [2]])
+                # third state probability formula
+                probability_high = np.matmul(high_state.transpose(), psi.conjugate())
+                probability_high = abs(np.sum(probability_high)) ** 2
+                leakage += probability_high
+                #print('leakage:', leakage)
+            end_leakage.append(leakage)
+            break
+
+    else:
+        third_state = 0
+        probability_third = 0
+        end_probability_third.append(probability_third)
+
 
 # Fidelity calculation
 rotation_core = np.array([[0, -1j], [1, 0]]) if rotation_type == 'y' else np.array([[0, 1], [-1j, 0]])
@@ -229,13 +240,12 @@ for i in range(1, 7, 1):
     probability = np.matmul(wave_function_calculation(alpha_state(dimension, i)).transpose(), psi_g.conjugate())
     probability = abs(np.sum(probability)) ** 2
     fidelity += 1 / 6 * probability
-    print(fidelity)
+print('fidelity:', fidelity)
 
-print('The fidelity is:', str(fidelity), sep=' ')
-print('The leakage is:', str(leakage))
+print('leakage:',end_leakage)
 
 # plot image
-axis = [tau * x for x in range(counts)]
+axis = [tau * x for x in range(k+1)]
 fig, at = plt.subplots()
 at.plot(axis, end_probability_excited, label='excited state')
 at.plot(axis, end_probability_ground, label='ground state')
