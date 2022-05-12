@@ -77,10 +77,10 @@ phase = 0 if rotation_type == 'y' else np.pi / 2
 dimension = int(input('Enter the number of dimensions: '))
 omega_01 = 5
 omega_R = 5
-amplitude_R = 0.01
-time = 310
+amplitude_R = 0.09
+#time = 320
 counts = 3000
-tau = time / counts
+#tau = time / counts
 alpha = 1
 beta = 0.5
 sigma = 3
@@ -127,7 +127,11 @@ end_probability_ground = []
 end_probability_third = []
 end_Rhabi = []
 end_leakage=[]
+end_fidelity=[]
+end_times=[]
 
+
+amplitude_set=[0.12,0.1,0.09,0.08,0.07,0.06,0.05,0.04,0.03,0.02,0.018,0.014,0.01]
 # Finding eigenvalues and eigenvectors
 Hamiltonian_0 = omega_01 * np.matmul(creation, annihilation) - mu / 2 * np.matmul(creation, annihilation) * (
         np.matmul(creation, annihilation) - I)
@@ -135,71 +139,79 @@ eigenenergy, eigenpsi = np.linalg.eig(Hamiltonian_0)
 
 # Main cycle
 
-psi = init_psi(dimension)
-for k in range(counts):
-    # Start of psi calculation
-    t = lambda k_: k_ * tau
 
-    oscillatory_part = amplitude_R * np.cos(omega_R * (t(k + 1 / 2)) + phase)
-    oscillatory_part_1st_derivative = -amplitude_R * omega_R * np.sin(omega_R * (t(k + 1 / 2)) + phase)
-    oscillatory_part_2nd_derivative = -amplitude_R * omega_R ** 2 * np.cos(omega_R * (t(k + 1 / 2)) + phase)
+for amp in amplitude_set:
+    psi = init_psi(dimension)
+    amplitude_R = amp
+    time=3.1/amp
+    tau = time / counts
+    print(amplitude_set.index(amp),'cycle, amp:', amp)
+    for k in range(counts):
+        # Start of psi calculation
+        t = lambda k_: k_ * tau
 
-    # Crank-Nicolson 2nd order method implementation
+        oscillatory_part = amplitude_R * np.cos(omega_R * (t(k + 1 / 2)) + phase)
+        oscillatory_part_1st_derivative = -amplitude_R * omega_R * np.sin(omega_R * (t(k + 1 / 2)) + phase)
+        oscillatory_part_2nd_derivative = -amplitude_R * omega_R ** 2 * np.cos(omega_R * (t(k + 1 / 2)) + phase)
 
-    Hamiltonian = omega_01 * np.matmul(creation, annihilation) - mu / 2 * np.matmul(creation, annihilation) * (
-            np.matmul(creation, annihilation) - I) + oscillatory_part * (creation + annihilation)
-    Hamiltonian_1st_derivative = oscillatory_part_1st_derivative
-    Hamiltonian_2nd_derivative = oscillatory_part_2nd_derivative
-    commutator = Hamiltonian_1st_derivative * Hamiltonian - Hamiltonian * Hamiltonian_1st_derivative
+        # Crank-Nicolson 2nd order method implementation
 
-    F = Hamiltonian + (tau ** 2 / 24) * Hamiltonian_2nd_derivative - 1j * (tau ** 2 / 12) * commutator
+        Hamiltonian = omega_01 * np.matmul(creation, annihilation) - mu / 2 * np.matmul(creation, annihilation) * (
+                np.matmul(creation, annihilation) - I) + oscillatory_part * (creation + annihilation)
+        Hamiltonian_1st_derivative = oscillatory_part_1st_derivative
+        Hamiltonian_2nd_derivative = oscillatory_part_2nd_derivative
+        commutator = Hamiltonian_1st_derivative * Hamiltonian - Hamiltonian * Hamiltonian_1st_derivative
 
-    numerator = I - (tau ** 2 / 12) * np.matmul(F, F) - 1j * (tau / 2) * F
-    denominator = I - (tau ** 2 / 12) * np.matmul(F, F) + 1j * (tau / 2) * F
-    denominator = np.linalg.inv(denominator)
-    fraction = np.matmul(denominator, numerator)
+        F = Hamiltonian + (tau ** 2 / 24) * Hamiltonian_2nd_derivative - 1j * (tau ** 2 / 12) * commutator
 
-    psi = np.matmul(fraction, psi)
+        numerator = I - (tau ** 2 / 12) * np.matmul(F, F) - 1j * (tau / 2) * F
+        denominator = I - (tau ** 2 / 12) * np.matmul(F, F) + 1j * (tau / 2) * F
+        denominator = np.linalg.inv(denominator)
+        fraction = np.matmul(denominator, numerator)
 
-    # initial excited/ground state
-    excited_state = np.array(eigenpsi[:, [1]])
-    ground_state = np.array(eigenpsi[:, [0]])
+        psi = np.matmul(fraction, psi)
 
-    # excited probability formula
-    probability_excited = np.matmul(excited_state.transpose(), psi.conjugate())
-    probability_excited = abs(np.sum(probability_excited)) ** 2
-    end_probability_excited.append(probability_excited)
+        # initial excited/ground state
+        excited_state = np.array(eigenpsi[:, [1]])
+        ground_state = np.array(eigenpsi[:, [0]])
 
-    # ground probability formula
-    probability_ground = np.matmul(ground_state.transpose(), psi.conjugate())
-    probability_ground = abs(np.sum(probability_ground)) ** 2
-    end_probability_ground.append(probability_ground)
+        # excited probability formula
+        probability_excited = np.matmul(excited_state.transpose(), psi.conjugate())
+        probability_excited = abs(np.sum(probability_excited)) ** 2
+        end_probability_excited.append(probability_excited)
 
-    # norm of the psi matrix
-    norm = abs(np.sum(psi * psi.conjugate()))
-    if dimension >= 3:
-        third_state = np.array(eigenpsi[:, [2]])
+        # ground probability formula
+        probability_ground = np.matmul(ground_state.transpose(), psi.conjugate())
+        probability_ground = abs(np.sum(probability_ground)) ** 2
+        end_probability_ground.append(probability_ground)
 
-        # third state probability formula
-        probability_third = np.matmul(third_state.transpose(), psi.conjugate())
-        probability_third = abs(np.sum(probability_third)) ** 2
-        end_probability_third.append(probability_third)
-        if abs(probability_excited-1)<0.01:
-            leakage = 0
-            for dim in range(2, dimension):
-                high_state = np.array(eigenpsi[:, [2]])
-                # third state probability formula
-                probability_high = np.matmul(high_state.transpose(), psi.conjugate())
-                probability_high = abs(np.sum(probability_high)) ** 2
-                leakage += probability_high
-                #print('leakage:', leakage)
-            end_leakage.append(leakage)
-            break
+        # norm of the psi matrix
+        norm = abs(np.sum(psi * psi.conjugate()))
+        if dimension >= 3:
+            third_state = np.array(eigenpsi[:, [2]])
 
-    else:
-        third_state = 0
-        probability_third = 0
-        end_probability_third.append(probability_third)
+            # third state probability formula
+            probability_third = np.matmul(third_state.transpose(), psi.conjugate())
+            probability_third = abs(np.sum(probability_third)) ** 2
+            end_probability_third.append(probability_third)
+            if abs(probability_excited-1)<amp:
+                print('time:',t(k),'count:',k)
+                end_times.append(t(k))
+                leakage = 0
+                for dim in range(2, dimension):
+                    high_state = np.array(eigenpsi[:, [dim]])
+                    # third state probability formula
+                    probability_high = np.matmul(high_state.transpose(), psi.conjugate())
+                    probability_high = abs(np.sum(probability_high)) ** 2
+                    leakage += probability_high
+                    #print('leakage:', leakage)
+                end_leakage.append(leakage)
+                break
+
+        else:
+            third_state = 0
+            probability_third = 0
+            end_probability_third.append(probability_third)
 
 
 # Fidelity calculation
@@ -240,8 +252,11 @@ for i in range(1, 7, 1):
     probability = np.matmul(wave_function_calculation(alpha_state(dimension, i)).transpose(), psi_g.conjugate())
     probability = abs(np.sum(probability)) ** 2
     fidelity += 1 / 6 * probability
-print('fidelity:', fidelity)
+end_fidelity.append(fidelity)
+#print('amp:',amplitude_R)
 
+#print('fidelity:', fidelity)
+print('times:',end_times)
 print('leakage:',end_leakage)
 
 # plot image
@@ -256,3 +271,7 @@ at.set_ylabel('probability')
 at.set_title("States graph")
 at.legend(loc='lower right')
 plt.show()
+
+amps=[]
+leakages=[]
+fidelities=[]
