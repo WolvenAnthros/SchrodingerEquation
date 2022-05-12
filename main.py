@@ -246,16 +246,20 @@ def wave_function_calculation(wave_function):
         wave_function = np.matmul(fraction, wave_function)
     return wave_function
 
-
-for i in range(1, 7, 1):
-    psi_g = np.matmul(rotation_matrix, alpha_state(dimension, i))
-    probability = np.matmul(wave_function_calculation(alpha_state(dimension, i)).transpose(), psi_g.conjugate())
-    probability = abs(np.sum(probability)) ** 2
-    fidelity += 1 / 6 * probability
-end_fidelity.append(fidelity)
+#for amp in amplitude_set:
+    #amplitude_R=amp
+    #time = 3.1 / amp
+    #tau = time / counts
+    #fidelity=0
+    #for i in range(1, 7, 1):
+    #    psi_g = np.matmul(rotation_matrix, alpha_state(dimension, i))
+    #    probability = np.matmul(wave_function_calculation(alpha_state(dimension, i)).transpose(), psi_g.conjugate())
+    #    probability = abs(np.sum(probability)) ** 2
+    #    fidelity += 1 / 6 * probability
+    #end_fidelity.append(fidelity)
 #print('amp:',amplitude_R)
 
-#print('fidelity:', fidelity)
+#print('fidelity:', end_fidelity)
 print('times:',end_times)
 print('leakage:',end_leakage)
 
@@ -272,6 +276,7 @@ at.set_title("States graph")
 at.legend(loc='lower right')
 plt.show()
 
-amps=[]
-leakages=[]
-fidelities=[]
+amps_harmonic=[0.12,0.1,0.09,0.08,0.07,0.06,0.05,0.04,0.03,0.02,0.018,0.014,0.01]
+times_harmonic=[[23.482499999999998, 28.447666666666667, 32.251481481481484, 36.0375, 40.37380952380952, 46.20722222222222, 56.254666666666665, 70.525, 95.06666666666666, 144.87333333333333, 161.77407407407406, 210.65238095238095, 302.45666666666665]]
+leakages_harmonic=[0.047583990306042365, 0.0446278433526341, 0.04979107566586703, 0.042444563007531355, 0.027545869981192846, 0.014466045111689215, 0.014963140419702273, 0.007769732965873183, 0.004856940857545456, 0.0021219578486229864, 0.001742155749432928, 0.0009413733438241942, 0.00045073225985224353]
+
