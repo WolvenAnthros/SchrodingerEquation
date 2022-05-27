@@ -77,12 +77,12 @@ phase = 0 if rotation_type == 'y' else np.pi / 2
 dimension = int(input('Enter the number of dimensions: '))
 omega_01 = 5
 omega_R = 5
-amplitude_R = 0.09
-#time = 320
+amplitude_R = 0.01
+time = 200
 counts = 3000
-#tau = time / counts
+tau = time / counts
 alpha = 1
-beta = 0.5
+beta = 0
 sigma = 3
 mu = 0.3
 t_g = 4 * sigma
@@ -101,8 +101,8 @@ def init_psi(dimensions):
     return matrix
 
 
-def Rhabi_solution():
-    for k in range(counts):
+def Rhabi_solution(k):
+    for k in range(k+1):
         # Start of psi calculation
         t = lambda k_: k_ * tau
         # Oscillatory amplitude (related to DRAG techinque)
@@ -131,7 +131,9 @@ end_fidelity=[]
 end_times=[]
 
 
-amplitude_set=[0.12,0.1,0.09,0.08,0.07,0.06,0.05,0.04,0.03,0.02,0.018,0.014,0.01]
+amplitude_set = np.array([0.01])
+amplitude_set = amplitude_set*10*3.6
+amplitude_set = amplitude_set.tolist()
 # Finding eigenvalues and eigenvectors
 Hamiltonian_0 = omega_01 * np.matmul(creation, annihilation) - mu / 2 * np.matmul(creation, annihilation) * (
         np.matmul(creation, annihilation) - I)
@@ -143,16 +145,29 @@ eigenenergy, eigenpsi = np.linalg.eig(Hamiltonian_0)
 for amp in amplitude_set:
     psi = init_psi(dimension)
     amplitude_R = amp
-    time=3.1/amp
+    time=130/amp
     tau = time / counts
     print(amplitude_set.index(amp),'cycle, amp:', amp)
     for k in range(counts):
         # Start of psi calculation
         t = lambda k_: k_ * tau
 
-        oscillatory_part = amplitude_R * np.cos(omega_R * (t(k + 1 / 2)) + phase)
-        oscillatory_part_1st_derivative = -amplitude_R * omega_R * np.sin(omega_R * (t(k + 1 / 2)) + phase)
-        oscillatory_part_2nd_derivative = -amplitude_R * omega_R ** 2 * np.cos(omega_R * (t(k + 1 / 2)) + phase)
+        Omega_x_numerator = np.exp(-(t(k) - 0.5 + t_g) ** 2 / (2 * sigma ** 2)) - np.exp(
+            -t_g ** 2 / (8 * sigma ** 2))
+        Omega_x_denominatior = np.sqrt(2 * np.pi * sigma ** 2) * math.erf(t_g / (np.sqrt(8) * sigma)) - t_g * np.exp(
+            -t_g ** 2 / (8 * sigma ** 2))
+        Omega_x = alpha * amplitude_R * Omega_x_numerator / Omega_x_denominatior
+
+        Omega_y_numerator = np.exp(-(t(k) - 0.5 + t_g) ** 2 / (2 * sigma ** 2)) * (t(k) - 0.5 * t_g)
+        Omega_y_denominator = (sigma ** 2) * Omega_x_denominatior
+        Omega_y = -beta * amplitude_R * (-Omega_y_numerator / Omega_y_denominator)
+
+        oscillatory_part = Omega_x * np.cos(omega_R * (t(k + 1 / 2))) + Omega_y * np.sin(
+            omega_R * (t(k + 1 / 2)))
+        oscillatory_part_1st_derivative = -Omega_x * omega_R * np.sin(
+            omega_R * (t(k + 1 / 2))) + Omega_y * omega_R * np.cos(omega_R * (t(k + 1 / 2)))
+        oscillatory_part_2nd_derivative = -Omega_x * omega_R ** 2 * np.cos(
+            omega_R * (t(k + 1 / 2))) - Omega_y * omega_R ** 2 * np.sin(omega_R * (t(k + 1 / 2)))
 
         # Crank-Nicolson 2nd order method implementation
 
@@ -194,7 +209,7 @@ for amp in amplitude_set:
             probability_third = np.matmul(third_state.transpose(), psi.conjugate())
             probability_third = abs(np.sum(probability_third)) ** 2
             end_probability_third.append(probability_third)
-            if abs(probability_excited-1)<amp:
+            if abs(probability_excited-1)<amp/(10*3):
                 print('time:',t(k),'count:',k)
                 end_times.append(t(k))
                 leakage = 0
@@ -213,7 +228,7 @@ for amp in amplitude_set:
             probability_third = 0
             end_probability_third.append(probability_third)
 
-
+Rhabi_solution(k)
 # Fidelity calculation
 rotation_core = np.array([[0, -1j], [1, 0]]) if rotation_type == 'y' else np.array([[0, 1], [-1j, 0]])
 rotation_matrix = np.identity(dimension, dtype='cfloat')
@@ -263,20 +278,28 @@ def wave_function_calculation(wave_function):
 print('times:',end_times)
 print('leakage:',end_leakage)
 
+
+
+amps_harmonic=[0.12,0.1,0.09,0.08,0.07,0.06,0.05,0.04,0.03,0.02,0.018,0.014,0.01]
+times_harmonic=[23.482499999999998, 28.447666666666667, 32.251481481481484, 36.0375, 40.37380952380952, 46.20722222222222, 56.254666666666665, 70.525, 95.06666666666666, 144.87333333333333, 161.77407407407406, 210.65238095238095, 302.45666666666665]
+leakages_harmonic=[0.047583990306042365, 0.0446278433526341, 0.04979107566586703, 0.042444563007531355, 0.027545869981192846, 0.014466045111689215, 0.014963140419702273, 0.007769732965873183, 0.004856940857545456, 0.0021219578486229864, 0.001742155749432928, 0.0009413733438241942, 0.00045073225985224353]
+
+amps_DRAG = np.array([0.12,0.1,0.09,0.08,0.07,0.06,0.05,0.04,0.03,0.02,0.018,0.014,0.01])
+amps_DRAG = amps_DRAG*10*3
+amps_DRAG = amps_DRAG.tolist()
+times_DRAG = [30.164814814814818, 36.934444444444445, 40.733333333333334, 45.75277777777777, 52.76349206349206, 62.11111111111112, 75.31333333333333, 95.33333333333333, 128.94074074074075, 198.39444444444442, 221.80246913580245, 291.468253968254]
+leakages_DRAG = [0.03736012237436596, 0.033725729848171467, 0.02247082494879301, 0.014074110193456614, 0.013699714552306253, 0.009811150926293984, 0.0073055069997196185, 0.004694266829021064, 0.0024444111615832733, 0.0010983342728314884, 0.0008964416181296032, 0.00047733699931035156]
+times_DRAG=[24.545524691358022, 30.16481481481481, 33.97119341563786, 38.26273148148148, 43.36772486772486, 51.358024691358025, 62.1111111111111, 78.54166666666666, 106.28703703703704, 163.40277777777777, 182.7623456790123, 238.76322751322746, 354.3703703703703]
+leakages_DRAG=[0.03590847725341302, 0.03735999040648547, 0.03820440106584877, 0.02873768725404596, 0.01621071733574948, 0.014199073867334176, 0.009811264439498492, 0.00690441777028871, 0.0034817065187071625, 0.0016537223712833197, 0.0012968257526546733, 0.000764157973805926, 0.0003275457443872466]
 # plot image
 axis = [tau * x for x in range(k+1)]
 fig, at = plt.subplots()
 at.plot(axis, end_probability_excited, label='excited state')
 at.plot(axis, end_probability_ground, label='ground state')
 at.plot(axis, end_probability_third, label='third state')
-# at.plot(axis, end_Rhabi, label='Rhabi')
+at.plot(axis, end_Rhabi, label='Rhabi')
 at.set_xlabel('time, ms')
 at.set_ylabel('probability')
 at.set_title("States graph")
 at.legend(loc='lower right')
 plt.show()
-
-amps_harmonic=[0.12,0.1,0.09,0.08,0.07,0.06,0.05,0.04,0.03,0.02,0.018,0.014,0.01]
-times_harmonic=[[23.482499999999998, 28.447666666666667, 32.251481481481484, 36.0375, 40.37380952380952, 46.20722222222222, 56.254666666666665, 70.525, 95.06666666666666, 144.87333333333333, 161.77407407407406, 210.65238095238095, 302.45666666666665]]
-leakages_harmonic=[0.047583990306042365, 0.0446278433526341, 0.04979107566586703, 0.042444563007531355, 0.027545869981192846, 0.014466045111689215, 0.014963140419702273, 0.007769732965873183, 0.004856940857545456, 0.0021219578486229864, 0.001742155749432928, 0.0009413733438241942, 0.00045073225985224353]
-
