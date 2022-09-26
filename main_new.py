@@ -75,10 +75,11 @@ dimension = 4
 omega_01 = 5 * 2 * np.pi
 omega_osc = 25 * 2 * np.pi
 pulse_period = 2 * np.pi / omega_osc
-amp = 4.5
+amp = 3
 time = 200
 pulse_time = 0.004
 mu = 0.25 * 2 * np.pi
+#pulses = [1 for x in range(120)]
 
 '''
 Matrices section
@@ -93,7 +94,7 @@ Hamiltonian_0 = omega_01 * np.matmul(creation, annihilation) - mu / 2 * np.matmu
         np.matmul(creation, annihilation) - I)
 eigenenergy, eigenpsi = np.linalg.eig(Hamiltonian_0)
 
-# Non-regular pulse array example
+# Irregular pulse array example
 pulse_list = [0, 1, 1, 1, -1, 0, 1, 1, 1, -1, -1, -1, 1, 1, -1, -1, 1, 1, -1, -1, 0, 1, 1, -1, -1, 0, 1, 1, -1, -1, 0,
               1, 1, -1, -1, 0, 1, 1, -1, -1,
               0, 1, 1, -1, -1, 0, 1, 1, -1, -1, 0, 1, 1, -1, -1, 0, 1, 1, -1, -1, 0, 1, 1, -1, -1, 0, 1, 1, -1, -1, 0,
@@ -101,11 +102,15 @@ pulse_list = [0, 1, 1, 1, -1, 0, 1, 1, 1, -1, -1, -1, 1, 1, -1, -1, 1, 1, -1, -1
               0, 1, 1, -1, -1, 0, 1, 1, -1, -1, 0, 1, 1, 1, -1, 0, 1, 1, -1, -1, 0, 1, 1, -1, -1, 1, 1, -1, -1, -1, 0,
               1, 1, -1, 1, 0, 1, -1, -1, -1, 0,
               1, -1, -1, -1]
+#pulse_list = [1 for x in range(30)]
+# pulse_positive = [pulse for pulse in pulse_list[::2]]
+# pulse_negative = [pulse for pulse in pulse_list[1::2]]
+
 
 for n in ['excited', 'ground', 'third']:
     globals()['end_probability_%s' % n] = []  # создать пустые списки end_probability_excited|ground|third
 
-for pulse in pulse_list:
+for pulse,index in zip(pulse_list,range(len(pulse_list))):
     '''
     Please pay attention that the pulse_period and pulse_time should converge well, otherwise
     we lose some of the counts
@@ -113,21 +118,21 @@ for pulse in pulse_list:
     counts = int(pulse_period * 2500)  # let's take a lot of counts for more reliability
 
     tau = pulse_period / counts # 0.0004
-    print(f'Pulse:{pulse}')
+    print(f'Pulse:{pulse}, index: {index}')
     for k in range(counts):
         # Start of psi calculation
         t = lambda k_: k_ * tau
         '''
         Defining pulse shape in time
         '''
-        if t(k) <= pulse_time:
+        if t(k) < pulse_time:
             oscillatory_part = amp * pulse
             oscillatory_part_1st_derivative = 0
             oscillatory_part_2nd_derivative = 0
-        elif pulse_period / 2 <= t(k) <= (pulse_period / 2 + pulse_time):
-            oscillatory_part = -amp * pulse
-            oscillatory_part_1st_derivative = 0
-            oscillatory_part_2nd_derivative = 0
+        # elif pulse_period / 2 < t(k) < (pulse_period / 2 + pulse_time):
+        #     oscillatory_part = -amp * pulse_neg
+        #     oscillatory_part_1st_derivative = 0
+        #     oscillatory_part_2nd_derivative = 0
         else:
             oscillatory_part = 0
             oscillatory_part_1st_derivative = 0
@@ -200,9 +205,9 @@ fig, at = plt.subplots()
 at.plot(axis, end_probability_excited, label='excited state')
 at.plot(axis, end_probability_ground, label='ground state')
 at.plot(axis, end_probability_third, label='third state')
-at.set_xlabel('time, ms')
+at.set_xlabel('time, ns')
 at.set_ylabel('probability')
 at.set_title("Leakage graph")
 at.legend(loc='lower left')
-# plt.yscale("log")
+#plt.yscale("log")
 plt.show()
